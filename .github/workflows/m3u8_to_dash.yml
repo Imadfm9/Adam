@@ -1,0 +1,24 @@
+name: Convert m3u8 to DASH Link
+
+on:
+  workflow_dispatch: # لتشغيل العمل يدويًا
+  push:
+    branches:
+      - main  # يمكنك تغييره للفرع الذي تفضله
+
+jobs:
+  convert-link:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'  # تحديد إصدار Python
+
+    - name: Run conversion script
+      run: |
+        python convert_link.py
