@@ -1,30 +1,37 @@
-name: Live Stream to Facebook
+name: Stream M3U8 to Facebook
 
 on:
-  schedule:
-    - cron: '*/5 * * * *' # تشغيل البث كل 5 دقائق
-  workflow_dispatch: # لبدء البث يدويًا من واجهة GitHub
+  push:
+    branches:
+      - main  # سيتم تفعيل هذا الـ Action عندما يتم الدفع للفرع 'main'
 
 jobs:
   stream:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+    - name: Install FFmpeg
+      run: |
+        sudo apt update
+        sudo apt install -y ffmpeg
 
-      - name: Start live streaming
-        env:
-          M3U8_URL: "https://live4.beinconnect.us/YallaGoalApp/beINSports1.m3u8" # رابط M3U8 الخاص بك
-          RTMP_URL: "rtmps://live-api-s.facebook.com:443/rtmp/FB-122163551444260989-0-AbzI8UAZAv2B1MoW" # مفتاح البث الجديد
-        run: |
-          ffmpeg -re -i $M3U8_URL -vf "drawtext=text='imad tv.com':fontcolor=white:fontsize=20:alpha=0.5:x=W-w-10:y=H-h-10" \
-          -c:v libx264 -preset veryfast -b:v 3000k -maxrate 3000k -bufsize 6000k \
-          -c:a aac -b:a 128k -ar 44100 -f flv \
-          -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 \
-          $RTMP_URL
+    - name: Start streaming to Facebook
+      run: |
+        # روابط M3U8 الخاصة بالقنوات
+        m3u8_url_1="https://live4.beinconnect.us/YallaGoalApp/beINSports1.m3u8"
+        m3u8_url_2="https://live4.beinconnect.us/YallaGoalApp/beINSports2.m3u8"
+        m3u8_url_3="https://live4.beinconnect.us/YallaGoalApp/beINSports3.m3u8"
+
+        # Stream Key من فيسبوك
+        stream_key="FB-122163568736260989-0-AbyRANJp5RcNj9g_"
+
+        # إعداد FFmpeg للبث إلى فيسبوك
+        ffmpeg -i "$m3u8_url_1" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
+               -i "$m3u8_url_2" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
+               -i "$m3u8_url_3" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
+               -filter_complex "[0:v][0:a][1:v][1:a][2:v][2:a]concat=n=3:v=1:a=1[v][a]" \
+               -map "[v]" -map "[a]" \
+               -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$stream_key"
