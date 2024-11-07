@@ -1,24 +1,36 @@
-name: Convert m3u8 to DASH Link
+name: Convert M3U8 to MPD
 
 on:
-  workflow_dispatch: # لتشغيل العمل يدويًا
   push:
     branches:
-      - main  # يمكنك تغييره للفرع الذي تفضله
+      - main  # أو أي فرع تود أن يحدث فيه الـ Action
 
 jobs:
-  convert-link:
+  convert:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'  # تحديد إصدار Python
-
-    - name: Run conversion script
+    - name: Install FFmpeg
       run: |
-        python convert_link.py
+        sudo apt update
+        sudo apt install -y ffmpeg
+
+    - name: Convert M3U8 to MPD
+      run: |
+        # ضع هنا رابط m3u8 الخاص بك
+        m3u8_url="https://live4.beinconnect.us/YallaGoalApp/beINSports3.m3u8"
+        
+        # تحديد المسار للمخرج MPD
+        output_mpd="output.mpd"
+        
+        # استخدام FFmpeg لتحويل m3u8 إلى mpd
+        ffmpeg -i "$m3u8_url" -c:v libx264 -c:a aac -f dash "$output_mpd"
+
+    - name: Upload MPD file
+      uses: actions/upload-artifact@v3
+      with:
+        name: converted-mpd
+        path: output.mpd
