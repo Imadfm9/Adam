@@ -1,9 +1,11 @@
-name: Stream M3U8 to Facebook
+name: Live Stream to Facebook
 
 on:
-  push:
-    branches:
-      - main  # سيتم تفعيل هذا الـ Action عندما يتم الدفع للفرع 'main'
+  workflow_dispatch:
+    inputs:
+      stream_key:
+        description: 'Facebook Stream Key'
+        required: true
 
 jobs:
   stream:
@@ -11,27 +13,32 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
 
     - name: Install FFmpeg
       run: |
-        sudo apt update
-        sudo apt install -y ffmpeg
-
-    - name: Start streaming to Facebook
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        
+    - name: Start Live Stream to Facebook
       run: |
+        echo "Starting stream to Facebook..."
+        
         # روابط M3U8 الخاصة بالقنوات
-        m3u8_url_1="https://live4.beinconnect.us/YallaGoalApp/beINSports1.m3u8"
-        m3u8_url_2="https://live4.beinconnect.us/YallaGoalApp/beINSports2.m3u8"
-        m3u8_url_3="https://live4.beinconnect.us/YallaGoalApp/beINSports3.m3u8"
+        m3u8_urls=(
+          "https://live4.beinconnect.us/YallaGoalApp/beINSports1.m3u8"
+          "https://live4.beinconnect.us/YallaGoalApp/beINSports2.m3u8"
+          "https://live4.beinconnect.us/YallaGoalApp/beINSports3.m3u8"
+        )
 
-        # Stream Key من فيسبوك
+        # Facebook Stream Key
         stream_key="FB-122163568736260989-0-AbyRANJp5RcNj9g_"
 
-        # إعداد FFmpeg للبث إلى فيسبوك
-        ffmpeg -i "$m3u8_url_1" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
-               -i "$m3u8_url_2" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
-               -i "$m3u8_url_3" -c:v libx264 -c:a aac -preset fast -tune zerolatency -b:v 1500k -f flv \
-               -filter_complex "[0:v][0:a][1:v][1:a][2:v][2:a]concat=n=3:v=1:a=1[v][a]" \
-               -map "[v]" -map "[a]" \
-               -f flv "rtmps://live-api-s.facebook.com:443/rtmp/$stream_key"
+        # تشغيل البث باستخدام FFmpeg لكل رابط M3U8
+        for url in "${m3u8_urls[@]}"; do
+          echo "Starting stream for $url"
+          ffmpeg -i "$url" \
+            -c:v libx264 -c:a aac -preset fast -tune zerolatency \
+            -b:v 1500k -maxrate 1500k -bufsize 3000k \
+            -f flv "rtmps://live-api-s.facebook.com:443/rtmp/${stream_key}"
+        done
